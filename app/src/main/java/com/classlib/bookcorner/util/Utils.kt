@@ -141,6 +141,11 @@ object Dates {
     fun md(millis: Long): String =
         java.text.SimpleDateFormat("M月d日", java.util.Locale.CHINA).format(java.util.Date(millis))
 
+    fun ymd(millis: Long): String =
+        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.CHINA).format(java.util.Date(millis))
+
+    fun ymdOrEmpty(millis: Long?): String = if (millis == null || millis <= 0) "" else ymd(millis)
+
     /** 应还日过没过期、过期几天 */
     fun overdueDays(dueAt: Long, now: Long = System.currentTimeMillis()): Long {
         if (dueAt >= now) return 0

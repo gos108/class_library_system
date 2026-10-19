@@ -46,9 +46,20 @@ class HomeActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.btnBorrow).setOnClickListener { go(ACTION_BORROW) }
         findViewById<TextView>(R.id.btnReturn).setOnClickListener { go(ACTION_RETURN) }
         findViewById<TextView>(R.id.btnSearch).setOnClickListener { go(ACTION_SEARCH) }
-        findViewById<TextView>(R.id.btnMore).setOnClickListener {
-            startActivity(Intent(this, MemberActivity::class.java))
-        }
+        findViewById<TextView>(R.id.btnMore).setOnClickListener { showMore() }
+    }
+
+    private fun showMore() {
+        val items = arrayOf("名册", "生成报表")
+        android.app.AlertDialog.Builder(this)
+            .setTitle("更多")
+            .setItems(items) { _, i ->
+                when (i) {
+                    0 -> startActivity(Intent(this, MemberActivity::class.java))
+                    1 -> startActivity(Intent(this, ReportActivity::class.java))
+                }
+            }
+            .show()
     }
 
     private fun go(action: String) {
