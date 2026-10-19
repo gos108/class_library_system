@@ -43,5 +43,20 @@
             android:name=".ui.IntakeActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.BorrowActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.ReturnActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.SearchActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
     </application>
 </manifest>

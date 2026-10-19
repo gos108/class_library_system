@@ -31,6 +31,20 @@
         android:textSize="15sp" />
 
     <TextView
+        android:id="@+id/btnManual"
+        android:layout_width="wrap_content"
+        android:layout_height="44dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="14dp"
+        android:background="@drawable/bg_btn"
+        android:gravity="center"
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp"
+        android:text="手输"
+        android:textColor="@color/text"
+        android:textSize="15sp" />
+
+    <TextView
         android:id="@+id/btnFlip"
         android:layout_width="wrap_content"
         android:layout_height="44dp"

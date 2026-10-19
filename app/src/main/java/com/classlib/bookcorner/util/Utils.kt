@@ -134,9 +134,24 @@ object NameMatcher {
     }
 }
 
+/** 日期展示与天数计算 */
+object Dates {
+    private const val DAY_MS = 24L * 60 * 60 * 1000
+
+    fun md(millis: Long): String =
+        java.text.SimpleDateFormat("M月d日", java.util.Locale.CHINA).format(java.util.Date(millis))
+
+    /** 应还日过没过期、过期几天 */
+    fun overdueDays(dueAt: Long, now: Long = System.currentTimeMillis()): Long {
+        if (dueAt >= now) return 0
+        return ((now - dueAt) / DAY_MS).coerceAtLeast(1)
+    }
+
+    fun plusDays(from: Long, days: Int): Long = from + days * DAY_MS
+}
+
 /** 轻量配置 */
-class Prefs(context: Context) {
-    private val sp = context.getSharedPreferences("bookcorner", Context.MODE_PRIVATE)
+class Prefs(context: Context) {    private val sp = context.getSharedPreferences("bookcorner", Context.MODE_PRIVATE)
 
     var classCode: Int
         get() = sp.getInt("class_code", 3)

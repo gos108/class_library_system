@@ -1,10 +1,13 @@
 package com.classlib.bookcorner.ui
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.Image
 import android.os.Bundle
+import android.text.InputType
+import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -67,6 +70,8 @@ class ScanActivity : AppCompatActivity() {
             tvHint.text = "已切到${if (prefs.cameraFacing == "front") "前置" else "侧摄"}摄像头"
             startCamera()
         }
+
+        findViewById<TextView>(R.id.btnManual).setOnClickListener { showManualInput() }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED
@@ -192,6 +197,30 @@ class ScanActivity : AppCompatActivity() {
         } finally {
             reader.reset()
         }
+    }
+
+    /** 标签磨损、对不上焦时的兜底：手输 9 位内部条码或 13 位 ISBN */
+    private fun showManualInput() {
+        val et = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            hint = "9 位条码 或 13 位 ISBN"
+            setTextColor(ContextCompat.getColor(this@ScanActivity, R.color.text))
+            setHintTextColor(ContextCompat.getColor(this@ScanActivity, R.color.text_dim))
+            setPadding(40, 30, 40, 30)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("手输条码")
+            .setView(et)
+            .setPositiveButton("确定") { _, _ ->
+                val t = et.text.toString().trim()
+                if (t.isEmpty()) {
+                    toast("没有输入内容")
+                } else {
+                    onFound(t)
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     private fun onFound(code: String) {
