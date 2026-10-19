@@ -1,0 +1,13 @@
+把 Vosk 中文小模型放在这个目录里。
+
+步骤：
+1. 下载 https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip
+2. 解压
+3. 把 vosk-model-small-cn-0.22/ 里的【全部内容】复制到本目录
+   目录结构应当长这样：
+   assets/model-cn/am/final.mdl
+   assets/model-cn/conf/mfcc.conf
+   assets/model-cn/graph/...
+   ...
+
+如果这个目录是空的，App 仍能正常运行，只是语音会降级为「点选名单」。

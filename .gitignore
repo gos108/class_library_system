@@ -1,0 +1,21 @@
+# Android
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+
+# 签名文件
+*.jks
+*.keystore
+
+# Vosk 语音模型：42MB，不入库，按 README 第 4 节自行下载
+/app/src/main/assets/model-cn/*
+!/app/src/main/assets/model-cn/放置模型说明.txt
