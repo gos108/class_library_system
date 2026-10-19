@@ -81,8 +81,15 @@ class ReportActivity : AppCompatActivity() {
                 val out = ReportBuilder(this).build()
                 val s = ReportServer(
                     0, token, out.xlsx, out.json,
-                    "共 ${out.total} 册 · 生成于 ${Dates.md(System.currentTimeMillis())}"
-                )
+                    "共 ${out.total} 册 · 生成于 ${Dates.md(System.currentTimeMillis())}",
+                    this
+                ) { msg ->
+                    // 从服务线程回来，切主线程更新界面
+                    App.ui {
+                        tvState.text = msg
+                        tvTip.text = "数据已换成备份里的内容。要看新报表请退出后重新进入本页。"
+                    }
+                }
                 s.start(3000, false)
                 App.ui {
                     file = out.xlsx

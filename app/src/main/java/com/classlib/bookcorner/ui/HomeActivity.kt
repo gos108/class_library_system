@@ -58,7 +58,7 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun showMore() {
-        val items = arrayOf("名册", "生成报表", "遗失 / 出库")
+        val items = arrayOf("名册", "报表 / 备份", "遗失 / 出库")
         android.app.AlertDialog.Builder(this)
             .setTitle("更多")
             .setItems(items) { _, i ->
