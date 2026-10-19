@@ -5,13 +5,22 @@ import com.classlib.bookcorner.App
 import com.classlib.bookcorner.db.ReportDao
 import com.classlib.bookcorner.model.Copy
 import com.classlib.bookcorner.util.Dates
+import com.classlib.bookcorner.util.Prefs
 import com.classlib.bookcorner.util.XlsxWriter
 import java.io.File
 
-/** 把库里的数据拼成 3 个 sheet 的 xlsx。 */
+/**
+ * 把库里的数据拼成 4 个 sheet 的 xlsx，外加一份可重建的 backup.json。
+ *
+ * 两个文件分工明确：
+ *  - xlsx  给人看（老师要的就是这个）
+ *  - json  给程序看（真正的备份，含名册、配置、操作流水）
+ */
 class ReportBuilder(private val ctx: Context) {
 
-    fun build(): File {
+    class Output(val xlsx: File, val json: File, val total: Int)
+
+    fun build(): Output {
         val dao = ReportDao(App.db)
         val now = System.currentTimeMillis()
 
@@ -20,6 +29,7 @@ class ReportBuilder(private val ctx: Context) {
         val counts = dao.counts()
         val owners = dao.ownerDistribution()
         val idlers = dao.idlers()
+        val members = dao.members()
 
         // ---- Sheet 1 书籍清单 ----
         val s1 = ArrayList<List<Any?>>()
@@ -54,6 +64,8 @@ class ReportBuilder(private val ctx: Context) {
 
         // ---- Sheet 3 概览 ----
         val s3 = ArrayList<List<Any?>>()
+        s3.add(listOf("导出时间", Dates.ymd(now)))
+        s3.add(emptyList())
         s3.add(listOf("总量"))
         s3.add(listOf("总册数", counts["total"] ?: 0))
         s3.add(listOf("在库（可借）", counts[Copy.STATUS_IN] ?: 0))
@@ -84,17 +96,56 @@ class ReportBuilder(private val ctx: Context) {
         idlers.forEach { s3.add(listOf(it)) }
         if (idlers.isEmpty()) s3.add(listOf("（无）"))
 
+        // ---- Sheet 4 名册 ----
+        val s4 = ArrayList<List<Any?>>()
+        s4.add(listOf("姓名", "拼音", "首字母", "角色", "状态", "带书册数", "借阅次数"))
+        members.forEach { m ->
+            s4.add(
+                listOf(
+                    m.name, m.pinyin, m.initials, roleLabel(m.role),
+                    if (m.status == "active") "在册" else "已转出",
+                    m.bookCount, m.loanCount
+                )
+            )
+        }
+
         val sheets = listOf(
             XlsxWriter.Sheet("书籍清单", s1),
             XlsxWriter.Sheet("借还记录", s2),
-            XlsxWriter.Sheet("概览", s3)
+            XlsxWriter.Sheet("概览", s3),
+            XlsxWriter.Sheet("名册", s4)
         )
 
         val dir = File(ctx.cacheDir, "report").apply { mkdirs() }
         dir.listFiles()?.forEach { it.delete() }   // 只保留最近一次
-        val file = File(dir, "bookcorner_${stamp()}.xlsx")
-        file.outputStream().use { XlsxWriter.write(it, sheets) }
-        return file
+        val stamp = stamp()
+
+        val xlsx = File(dir, "bookcorner_$stamp.xlsx")
+        xlsx.outputStream().use { XlsxWriter.write(it, sheets) }
+
+        val json = File(dir, "bookcorner_backup_$stamp.json")
+        json.writeText(dao.dumpJson(meta(now)), Charsets.UTF_8)
+
+        return Output(xlsx, json, counts["total"] ?: 0)
+    }
+
+    private fun meta(now: Long): Map<String, Any?> {
+        val p = Prefs(ctx)
+        return linkedMapOf(
+            "app" to "班级图书角",
+            "schema" to 1,
+            "exported_at" to Dates.ymd(now),
+            "exported_at_ms" to now,
+            "class_code" to p.classCode,
+            "loan_days" to p.loanDays,
+            "categories" to Prefs.CATEGORIES.joinToString(",")
+        )
+    }
+
+    private fun roleLabel(role: String): String = when (role) {
+        "librarian" -> "图书管理员"
+        "teacher" -> "老师"
+        else -> "学生"
     }
 
     private fun stamp(): String =

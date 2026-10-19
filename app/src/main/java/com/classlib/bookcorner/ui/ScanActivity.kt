@@ -199,17 +199,22 @@ class ScanActivity : AppCompatActivity() {
         }
     }
 
-    /** 标签磨损、对不上焦时的兜底：手输 9 位内部条码或 13 位 ISBN */
+    /**
+     * 对不上焦、标签磨花、书本来就没条码时的兜底。
+     *
+     * 允许输三种东西：9 位内部码 / 13 位 ISBN / 书名的一部分。
+     * 最后一种是无条码旧书唯一能走的路。
+     */
     private fun showManualInput() {
         val et = EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER
-            hint = "9 位条码 或 13 位 ISBN"
+            inputType = InputType.TYPE_CLASS_TEXT
+            hint = "9 位条码 / 13 位 ISBN / 书名"
             setTextColor(ContextCompat.getColor(this@ScanActivity, R.color.text))
             setHintTextColor(ContextCompat.getColor(this@ScanActivity, R.color.text_dim))
             setPadding(40, 30, 40, 30)
         }
         AlertDialog.Builder(this)
-            .setTitle("手输条码")
+            .setTitle("手输或搜书名")
             .setView(et)
             .setPositiveButton("确定") { _, _ ->
                 val t = et.text.toString().trim()

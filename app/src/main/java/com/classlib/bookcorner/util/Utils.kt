@@ -153,10 +153,18 @@ object Dates {
     }
 
     fun plusDays(from: Long, days: Int): Long = from + days * DAY_MS
+
+    /** 距今多少天（0 = 今天）。millis <= 0 视为「从未」返回 -1 */
+    fun daysSince(millis: Long, now: Long = System.currentTimeMillis()): Long {
+        if (millis <= 0) return -1
+        return ((now - millis) / DAY_MS).coerceAtLeast(0)
+    }
 }
 
 /** 轻量配置 */
-class Prefs(context: Context) {    private val sp = context.getSharedPreferences("bookcorner", Context.MODE_PRIVATE)
+class Prefs(context: Context) {
+
+    private val sp = context.getSharedPreferences("bookcorner", Context.MODE_PRIVATE)
 
     var classCode: Int
         get() = sp.getInt("class_code", 3)
@@ -170,6 +178,11 @@ class Prefs(context: Context) {    private val sp = context.getSharedPreferences
     var cameraFacing: String
         get() = sp.getString("camera_facing", "back") ?: "back"
         set(v) = sp.edit().putString("camera_facing", v).apply()
+
+    /** 上次导出报表的时间；0 = 从没导过。首页据此提醒，代替「每日自动备份」 */
+    var lastExportAt: Long
+        get() = sp.getLong("last_export_at", 0L)
+        set(v) = sp.edit().putLong("last_export_at", v).apply()
 
     /** 分类名 → 两位分类码 */
     fun categoryCode(category: String): Int {

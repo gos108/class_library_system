@@ -34,10 +34,19 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingStart="6dp"
-                android:paddingBottom="2dp"
                 android:text="@string/home_stat"
                 android:textColor="@color/text"
                 android:textSize="19sp" />
+
+            <TextView
+                android:id="@+id/tvExport"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="6dp"
+                android:paddingBottom="2dp"
+                android:text=""
+                android:textColor="@color/text_dim"
+                android:textSize="12sp" />
         </LinearLayout>
 
         <TextView

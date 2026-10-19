@@ -1,5 +1,6 @@
 package com.classlib.bookcorner.db
 
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.classlib.bookcorner.model.Copy
 
@@ -29,6 +30,16 @@ class ReportDao(private val db: SQLiteDatabase) {
     )
 
     data class OwnerCount(val name: String, val count: Int)
+
+    data class MemberRow(
+        val name: String,
+        val pinyin: String,
+        val initials: String,
+        val role: String,
+        val status: String,
+        val bookCount: Int,
+        val loanCount: Int
+    )
 
     data class OverdueRow(val member: String, val title: String, val dueAt: Long, val days: Long)
 
@@ -130,5 +141,104 @@ class ReportDao(private val db: SQLiteDatabase) {
         val out = ArrayList<String>()
         db.rawQuery(sql, null).use { c -> while (c.moveToNext()) out.add(c.getString(0)) }
         return out
+    }
+
+    /**
+     * 名册。没有这一张，导出的文件只能「看懂」，不能「重建」——
+     * 一次都没带过书、也没借过书的同学会整个消失。
+     */
+    fun members(): List<MemberRow> {
+        val sql = """
+            SELECT m.name, m.pinyin, m.initials, m.role, m.status,
+                   (SELECT COUNT(*) FROM copy c WHERE c.owner_id = m.id),
+                   (SELECT COUNT(*) FROM loan l WHERE l.member_id = m.id)
+              FROM member m
+             ORDER BY m.sort_no, m.id
+        """.trimIndent()
+        val out = ArrayList<MemberRow>()
+        db.rawQuery(sql, null).use { c ->
+            while (c.moveToNext()) {
+                out.add(
+                    MemberRow(
+                        name = c.getString(0),
+                        pinyin = c.getString(1),
+                        initials = c.getString(2),
+                        role = c.getString(3),
+                        status = c.getString(4),
+                        bookCount = c.getInt(5),
+                        loanCount = c.getInt(6)
+                    )
+                )
+            }
+        }
+        return out
+    }
+
+    /**
+     * 全库转储成 JSON。这是「备份」的真正形态：导出件要能反向重建，
+     * 不是给人看的表格，是给程序读的。
+     *
+     * 用 SELECT * + 游标元数据生成，表结构变了不用改这里。
+     */
+    fun dumpJson(meta: Map<String, Any?>): String {
+        val sb = StringBuilder()
+        sb.append("{\n")
+        meta.forEach { (k, v) ->
+            sb.append("  ").append(quote(k)).append(": ").append(jsonValue(v)).append(",\n")
+        }
+        sb.append("  \"tables\": {\n")
+        TABLES.forEachIndexed { ti, t ->
+            sb.append("    ").append(quote(t)).append(": [")
+            db.rawQuery("SELECT * FROM $t ORDER BY id", null).use { c ->
+                var first = true
+                while (c.moveToNext()) {
+                    if (!first) sb.append(",")
+                    first = false
+                    sb.append("\n      {")
+                    for (i in c.columnNames.indices) {
+                        if (i > 0) sb.append(", ")
+                        sb.append(quote(c.columnNames[i])).append(": ")
+                        when (c.getType(i)) {
+                            Cursor.FIELD_TYPE_NULL -> sb.append("null")
+                            Cursor.FIELD_TYPE_INTEGER -> sb.append(c.getLong(i))
+                            Cursor.FIELD_TYPE_FLOAT -> sb.append(c.getDouble(i))
+                            else -> sb.append(quote(c.getString(i)))
+                        }
+                    }
+                    sb.append("}")
+                }
+            }
+            sb.append("\n    ]")
+            if (ti < TABLES.size - 1) sb.append(",")
+            sb.append("\n")
+        }
+        sb.append("  }\n}\n")
+        return sb.toString()
+    }
+
+    private fun jsonValue(v: Any?): String = when (v) {
+        null -> "null"
+        is Number, is Boolean -> v.toString()
+        else -> quote(v.toString())
+    }
+
+    private fun quote(s: String?): String {
+        if (s == null) return "null"
+        val sb = StringBuilder("\"")
+        for (ch in s) {
+            when (ch) {
+                '"' -> sb.append("\\\"")
+                '\\' -> sb.append("\\\\")
+                '\n' -> sb.append("\\n")
+                '\r' -> sb.append("\\r")
+                '\t' -> sb.append("\\t")
+                else -> if (ch < ' ') sb.append(String.format("\\u%04x", ch.code)) else sb.append(ch)
+            }
+        }
+        return sb.append("\"").toString()
+    }
+
+    companion object {
+        private val TABLES = listOf("member", "book", "copy", "loan", "op_log")
     }
 }

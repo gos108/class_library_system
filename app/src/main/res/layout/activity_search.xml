@@ -6,53 +6,74 @@
     android:orientation="vertical"
     android:padding="8dp">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/etQuery"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@color/surface"
+            android:hint="扫书脊码，或输书名"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:maxLines="1"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:singleLine="true"
+            android:textColor="@color/text"
+            android:textColorHint="@color/text_dim"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/btnGo"
+            android:layout_width="52dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_btn"
+            android:backgroundTint="@color/green"
+            android:gravity="center"
+            android:text="查"
+            android:textColor="@color/text"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/btnScan"
+            android:layout_width="52dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_btn"
+            android:backgroundTint="@color/blue"
+            android:gravity="center"
+            android:text="扫"
+            android:textColor="@color/text"
+            android:textSize="15sp" />
+    </LinearLayout>
+
     <TextView
-        android:id="@+id/tvBarcode"
+        android:id="@+id/tvCount"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:paddingStart="2dp"
         android:textColor="@color/text_dim"
         android:textSize="13sp" />
 
-    <TextView
-        android:id="@+id/tvTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:textColor="@color/text"
-        android:textSize="21sp" />
-
-    <TextView
-        android:id="@+id/tvAuthor"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="@color/text_dim"
-        android:textSize="13sp" />
-
-    <TextView
-        android:id="@+id/tvStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:textSize="19sp" />
-
-    <TextView
-        android:id="@+id/tvDetail"
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:layout_marginTop="4dp"
         android:layout_weight="1"
-        android:layout_marginTop="6dp"
-        android:lineSpacingExtra="6dp"
-        android:textColor="@color/text"
-        android:textSize="15sp" />
+        android:scrollbars="none">
 
-    <TextView
-        android:id="@+id/btnClose"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="@drawable/bg_btn"
-        android:gravity="center"
-        android:text="关 闭"
-        android:textColor="@color/text"
-        android:textSize="17sp" />
+        <LinearLayout
+            android:id="@+id/llResults"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
 
 </LinearLayout>

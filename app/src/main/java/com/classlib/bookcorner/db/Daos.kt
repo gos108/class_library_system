@@ -175,8 +175,23 @@ class CopyDao(private val db: SQLiteDatabase) {
         }
     }
 
-    /** 查书：联表拿书名、所有者、当前借阅人 */
-    fun viewByBarcode(barcode: String): CopyView? {
+    /** 按内部条码精确定位一册 */
+    fun viewByBarcode(barcode: String): CopyView? =
+        queryViews("c.barcode = ?", arrayOf(barcode)).firstOrNull()
+
+    /** 同一书目的全部册（ISBN 解析后用） */
+    fun viewsByBook(bookId: Long): List<CopyView> =
+        queryViews("c.book_id = ?", arrayOf(bookId.toString()))
+
+    /** 书名里含关键词的册（没有 ISBN 的书只能靠这个找） */
+    fun viewsByTitleLike(keyword: String, limit: Int): List<CopyView> =
+        queryViews("b.title LIKE ?", arrayOf("%$keyword%"), limit)
+
+    /**
+     * 查书主查询。抽出来是为了让「条码 / ISBN / 书名」三条路复用同一段 join，
+     * 避免某天改了一处忘了另一处。
+     */
+    private fun queryViews(where: String, args: Array<String>, limit: Int = 0): List<CopyView> {
         val sql = """
             SELECT c.id, c.barcode, b.title, b.author, b.category, c.status,
                    mo.name AS owner_name, c.shelf,
@@ -186,22 +201,30 @@ class CopyDao(private val db: SQLiteDatabase) {
               LEFT JOIN member mo ON mo.id = c.owner_id
               LEFT JOIN loan l ON l.copy_id = c.id AND l.status = 'active'
               LEFT JOIN member ml ON ml.id = l.member_id
-             WHERE c.barcode = ?
-        """.trimIndent()
-        db.rawQuery(sql, arrayOf(barcode)).use { c ->
-            return if (c.moveToFirst()) CopyView(
-                copyId = c.getLong(0),
-                barcode = c.getString(1),
-                title = c.getString(2),
-                author = if (c.isNull(3)) null else c.getString(3),
-                category = c.getString(4),
-                status = c.getString(5),
-                ownerName = if (c.isNull(6)) null else c.getString(6),
-                shelf = if (c.isNull(7)) null else c.getString(7),
-                borrowerName = if (c.isNull(8)) null else c.getString(8),
-                dueAt = if (c.isNull(9)) null else c.getLong(9)
-            ) else null
+             WHERE $where
+             ORDER BY c.id
+        """.trimIndent() + if (limit > 0) " LIMIT $limit" else ""
+
+        val out = ArrayList<CopyView>()
+        db.rawQuery(sql, args).use { c ->
+            while (c.moveToNext()) {
+                out.add(
+                    CopyView(
+                        copyId = c.getLong(0),
+                        barcode = c.getString(1),
+                        title = c.getString(2),
+                        author = if (c.isNull(3)) null else c.getString(3),
+                        category = c.getString(4),
+                        status = c.getString(5),
+                        ownerName = if (c.isNull(6)) null else c.getString(6),
+                        shelf = if (c.isNull(7)) null else c.getString(7),
+                        borrowerName = if (c.isNull(8)) null else c.getString(8),
+                        dueAt = if (c.isNull(9)) null else c.getLong(9)
+                    )
+                )
+            }
         }
+        return out
     }
 
     /** 改状态（带乐观锁），返回是否成功 */

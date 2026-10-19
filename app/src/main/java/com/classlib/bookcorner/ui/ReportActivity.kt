@@ -19,6 +19,8 @@ import com.classlib.bookcorner.export.Hotspot
 import com.classlib.bookcorner.export.Net
 import com.classlib.bookcorner.export.ReportBuilder
 import com.classlib.bookcorner.export.ReportServer
+import com.classlib.bookcorner.util.Dates
+import com.classlib.bookcorner.util.Prefs
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import java.io.File
@@ -45,6 +47,7 @@ class ReportActivity : AppCompatActivity() {
     private var server: ReportServer? = null
     private val hotspot = Hotspot(this)
     private var file: File? = null
+    private var jsonFile: File? = null
     private val token: String = randomToken()
 
     private var port: Int = 0
@@ -70,20 +73,25 @@ class ReportActivity : AppCompatActivity() {
         prepare()
     }
 
-    /** 生成 xlsx + 起服务 */
+    /** 生成 xlsx + backup.json，然后起服务 */
     private fun prepare() {
         tvState.text = "正在生成报表…"
         App.io.execute {
             try {
-                val f = ReportBuilder(this).build()
-                val s = ReportServer(0, token, f)   // 0 = 随机空闲端口
+                val out = ReportBuilder(this).build()
+                val s = ReportServer(
+                    0, token, out.xlsx, out.json,
+                    "共 ${out.total} 册 · 生成于 ${Dates.md(System.currentTimeMillis())}"
+                )
                 s.start(3000, false)
                 App.ui {
-                    file = f
+                    file = out.xlsx
+                    jsonFile = out.json
                     server = s
                     port = s.boundPort
+                    Prefs(this).lastExportAt = System.currentTimeMillis()
                     android.util.Log.d(TAG, "server started, port=$port")
-                    tvState.text = "报表已生成（${f.length() / 1024} KB）"
+                    tvState.text = "报表已生成（${out.xlsx.length() / 1024} KB）"
                     startHotspot()
                 }
             } catch (e: Throwable) {
@@ -133,7 +141,7 @@ class ReportActivity : AppCompatActivity() {
     /** A 态：手表热点 */
     private fun showAMode(ssid: String, pass: String) {
         val ip = Net.hotspotIp()
-        val url = "http://$ip:$port/r?t=$token"
+        val url = "http://$ip:$port/i?t=$token"
         android.util.Log.d(TAG, "A-mode url=$url")
 
         tvState.text = "报表已就绪"
@@ -167,7 +175,7 @@ class ReportActivity : AppCompatActivity() {
             tvTip.text = "让手表连上老师的手机热点后，点「刷新地址」"
             android.util.Log.d(TAG, "B-mode, no wifi ip, port=$port")
         } else {
-            val url = "http://$ip:$port/r?t=$token"
+            val url = "http://$ip:$port/i?t=$token"
             android.util.Log.d(TAG, "B-mode url=$url")
             tvUrl.text = "$ip:$port"
             ivUrlQr.setImageBitmap(qr(url))
@@ -192,6 +200,7 @@ class ReportActivity : AppCompatActivity() {
         server = null
         hotspot.stop()
         file?.delete()
+        jsonFile?.delete()
     }
 
     private fun randomToken(): String {

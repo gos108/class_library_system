@@ -6,7 +6,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.classlib.bookcorner.App
 import com.classlib.bookcorner.R
-import com.classlib.bookcorner.db.CopyDao
+import com.classlib.bookcorner.db.BookFinder
 import com.classlib.bookcorner.db.LoanDao
 import com.classlib.bookcorner.model.Copy
 import com.classlib.bookcorner.model.CopyView
@@ -14,7 +14,12 @@ import com.classlib.bookcorner.model.Member
 import com.classlib.bookcorner.util.Dates
 import com.classlib.bookcorner.util.Prefs
 
-/** 借出：扫码/手输条码 → 选人 → 确认。 */
+/**
+ * 借出：扫书脊码 / 手输 ISBN / 输书名 → 选人 → 确认。
+ *
+ * 现在的入口码可以是出版商 ISBN——这才是真书上手就能扫到的东西。
+ * 内部 9 位码只是系统内的短码，不依赖书上贴标签。
+ */
 class BorrowActivity : AppCompatActivity() {
 
     private lateinit var picker: PersonPicker
@@ -55,35 +60,46 @@ class BorrowActivity : AppCompatActivity() {
     private fun load(code: String) {
         val days = Prefs(this).loanDays
         App.io.execute {
-            val v = CopyDao(App.db).viewByBarcode(code)
+            val r = BookFinder(App.db).resolve(code)
             App.ui {
-                if (v == null) {
-                    toast("库里没有这个条码：$code")
+                if (r.copies.isEmpty()) {
+                    toast(if (r.looksLikeIsbn) "这本书还没入库：${r.input}" else "库里没有这本书：${r.input}")
                     finish()
                     return@ui
                 }
-                when (v.status) {
-                    Copy.STATUS_IN -> Unit
-                    Copy.STATUS_OUT -> {
-                        toast("这本书已经借出去了" + (v.borrowerName?.let { "（$it）" } ?: ""))
-                        finish()
-                        return@ui
-                    }
-                    else -> {
-                        toast("这本书当前是「${Copy.label(v.status)}」，不能借")
-                        finish()
-                        return@ui
-                    }
+
+                val avail = r.inStock()
+                if (avail.isEmpty()) {
+                    val v = r.copies[0]
+                    toast(
+                        if (v.status == Copy.STATUS_OUT) {
+                            "这本书已经借出去了" + (v.borrowerName?.let { "（$it）" } ?: "")
+                        } else {
+                            "这本书当前是「${Copy.label(v.status)}」，不能借"
+                        }
+                    )
+                    finish()
+                    return@ui
                 }
-                copy = v
-                findViewById<TextView>(R.id.tvBarcode).text = "条码：${v.barcode}"
-                findViewById<TextView>(R.id.tvTitle).text = v.title
-                findViewById<TextView>(R.id.tvOwner).text =
-                    "所有者：${v.ownerName ?: "未登记"}"
-                findViewById<TextView>(R.id.tvDue).text =
-                    "借期 $days 天，应还 ${Dates.md(Dates.plusDays(System.currentTimeMillis(), days))}"
+
+                // 同一 ISBN 的多册物理上可互换，不必让用户点；
+                // 只有按书名搜出不同书目时才有歧义，那时才弹选册。
+                val candidates = if (r.kind == BookFinder.Kind.TITLE) avail else avail.take(1)
+                CopyPicker.pick(this@BorrowActivity, "选一册借出", candidates, onCancel = { finish() }) { v ->
+                    bind(v, days, avail.size)
+                }
             }
         }
+    }
+
+    private fun bind(v: CopyView, days: Int, inStockCount: Int) {
+        copy = v
+        val extra = if (inStockCount > 1) " · 同书还有 ${inStockCount - 1} 册在库" else ""
+        findViewById<TextView>(R.id.tvBarcode).text = "条码：${v.barcode}"
+        findViewById<TextView>(R.id.tvTitle).text = v.title
+        findViewById<TextView>(R.id.tvOwner).text = "所有者：${v.ownerName ?: "未登记"}$extra"
+        findViewById<TextView>(R.id.tvDue).text =
+            "借期 $days 天，应还 ${Dates.md(Dates.plusDays(System.currentTimeMillis(), days))}"
     }
 
     private fun confirm() {
