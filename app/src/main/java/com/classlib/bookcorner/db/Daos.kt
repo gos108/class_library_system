@@ -292,8 +292,8 @@ class LoanDao(private val db: SQLiteDatabase) {
             if (rows != 1) throw IllegalStateException("这本书刚被别人借走了")
 
             db.execSQL(
-                "INSERT INTO op_log(action,target_type,target_id,from_status,to_status,created_at) VALUES(?,?,?,?,?,?)",
-                arrayOf("loan.borrow", "copy", copyId, Copy.STATUS_IN, Copy.STATUS_OUT, now)
+                "INSERT INTO op_log(action,target_type,target_id,from_status,to_status,operator_id,created_at) VALUES(?,?,?,?,?,?,?)",
+                arrayOf("loan.borrow", "copy", copyId, Copy.STATUS_IN, Copy.STATUS_OUT, operatorId, now)
             )
             db.setTransactionSuccessful()
             return Loan(loanId, copyId, memberId, now, due, null, Loan.STATUS_ACTIVE, operatorId)
@@ -325,8 +325,8 @@ class LoanDao(private val db: SQLiteDatabase) {
                 arrayOf(copyId.toString())
             )
             db.execSQL(
-                "INSERT INTO op_log(action,target_type,target_id,from_status,to_status,created_at) VALUES(?,?,?,?,?,?)",
-                arrayOf("loan.return", "copy", copyId, Copy.STATUS_OUT, Copy.STATUS_IN, now)
+                "INSERT INTO op_log(action,target_type,target_id,from_status,to_status,operator_id,created_at) VALUES(?,?,?,?,?,?,?)",
+                arrayOf("loan.return", "copy", copyId, Copy.STATUS_OUT, Copy.STATUS_IN, operatorId, now)
             )
             db.setTransactionSuccessful()
             return true

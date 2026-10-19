@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.speech.RecognizerIntent
 import android.util.Log
-import androidx.core.util.Consumer
 import com.classlib.bookcorner.App
 import org.json.JSONObject
 import org.vosk.Model
@@ -67,12 +66,12 @@ class VoskEngine(private val ctx: Context) {
                 ctx,
                 MODEL_ASSET_DIR,
                 MODEL_TARGET_DIR,
-                Consumer<Model> { m ->
+                StorageService.Callback<Model> { m ->
                     model = m
                     ready = true
                     App.ui { onReady() }
                 },
-                Consumer<IOException> { e ->
+                StorageService.Callback<IOException> { e ->
                     Log.w(TAG, "unpack failed", e)
                     App.ui { onError("语音模型未就绪：${e.message}") }
                 }
@@ -95,7 +94,7 @@ class VoskEngine(private val ctx: Context) {
             recognizer = r
             val svc = SpeechService(r, SAMPLE_RATE)
             speechService = svc
-            svc.setListener(object : RecognitionListener {
+            val started = svc.startListening(object : RecognitionListener {
                 override fun onPartialResult(hypothesis: String?) {
                     // 不用中间结果，避免抖动
                 }
@@ -118,7 +117,13 @@ class VoskEngine(private val ctx: Context) {
                     App.ui { onError("没有听到声音") }
                 }
             })
-            svc.startListening()
+
+            // startListening 返回 false 表示录音没能启动（多半是被占用或权限问题）。
+            // 不处理的话界面会一直停在"正在听"，孩子会以为系统坏了。
+            if (!started) {
+                stop()
+                onError("麦克风没能启动，请重试或从名单选")
+            }
         } catch (e: Throwable) {
             Log.w(TAG, "start failed", e)
             onError("无法启动录音：${e.message}")
